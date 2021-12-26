@@ -9,12 +9,13 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue'
+import { getSearchBook } from '@/api'
 
 const value = ref<string>('')
 
-const onSearch = (searchValue: string) => {
-  console.log('use value', searchValue)
-  console.log('or use this.value', value.value)
+const onSearch = async (searchValue: string) => {
+  const res = await getSearchBook({ keyWord: searchValue }, {})
+  console.log(res)
 }
 </script>
 
