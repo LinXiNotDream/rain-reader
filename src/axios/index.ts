@@ -1,15 +1,11 @@
 import axios from 'axios'
 
-import { ElLoading } from 'element-plus'
-
 // 设置baseURL，判断当前环境是否为生产环境，若不是需设置自己的apiURL
 let baseURL = process.env.NODE_ENV !== 'production' ? '/' : '/'
 let config = {
   baseURL,
   timeout: 60 * 1000, // 请求超时时间
 }
-
-let loadingInstance: any
 
 const _axios = axios.create(config)
 
@@ -19,8 +15,6 @@ let CancelToken = axios.CancelToken
 _axios.interceptors.request.use(
   function (config) {
     // Do something before request is sent
-    if (config.loadingOptions)
-      loadingInstance = ElLoading.service(config.loadingOptions)
     // 请求发起之前先检验该请求是否在队列中，如果在就把队列中pending的请求cancel掉
     judgePendingFunc(config)
     // 将pending队列中的请求设置为当前
@@ -37,7 +31,6 @@ _axios.interceptors.request.use(
   function (error) {
     // Do something with request error
     console.log(error)
-    if (loadingInstance) loadingInstance.close()
     return Promise.reject(error)
   }
 )
@@ -46,7 +39,6 @@ _axios.interceptors.request.use(
 _axios.interceptors.response.use(
   function (response) {
     // Do something with response data
-    if (loadingInstance) loadingInstance.close()
     removeResolvedFunc(response.config)
     console.log(response)
     return response.data
@@ -54,7 +46,6 @@ _axios.interceptors.response.use(
   function (error) {
     // Do something with response error
     console.log(error)
-    if (loadingInstance) loadingInstance.close()
     return Promise.reject(error)
   }
 )
@@ -66,7 +57,7 @@ _axios.interceptors.response.use(
  * @param {Object} data
  * @param {Object} config
  */
-const getFn = async (url, data, config = {}) => {
+const getFn = async (url: string, data: any, config: object = {}) => {
   let params = { params: data, ...config }
   try {
     return _axios.get(url, params)
@@ -80,14 +71,14 @@ const getFn = async (url, data, config = {}) => {
  * @param {Object} data
  * @param {Object} config
  */
-const postFn = async (url, data, config = {}) => {
+const postFn = async (url: string, data: any, config: object = {}) => {
   try {
     return _axios.post(url, data, config)
   } catch (error) {
     return handleError(error)
   }
 }
-const deleteFn = async (url, data) => {
+const deleteFn = async (url: string, data: any) => {
   try {
     return _axios.delete(url, data)
   } catch (error) {
@@ -95,25 +86,25 @@ const deleteFn = async (url, data) => {
   }
 }
 // 捕获请求错误
-function handleError(error) {
+function handleError(error: any) {
   Promise.reject(error)
 }
 // 判断请求是否在队列中，如果在就执行取消请求
-const judgePendingFunc = function (config) {
+const judgePendingFunc = function (config: any) {
   if (pendingQueue.has(`${config.method}->${config.url}`)) {
     pendingQueue.get(`${config.method}->${config.url}`)()
   }
 }
 // 删除队列中对应已执行的请求
-const removeResolvedFunc = function (config) {
+const removeResolvedFunc = function (config: any) {
   if (pendingQueue.has(`${config.method}->${config.url}`)) {
     pendingQueue.delete(`${config.method}->${config.url}`)
   }
 }
 // 处理get请求功能性字符和非功能性字符被转换导致的问题
-const handleGetUrl = function (url, params) {
+const handleGetUrl = function (url: any, params: any) {
   if (!params) return { url: url, params: params }
-  let parts = []
+  let parts: Array<string> = []
   let resUrl = url
   let resParams = params
   let keys = Object.keys(params)
@@ -124,7 +115,7 @@ const handleGetUrl = function (url, params) {
         values = params[key]
         key += '[]'
       } else values = [params[key]]
-      values.forEach((val) => {
+      values.forEach((val: any) => {
         if (val || val === 0)
           parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
       })
