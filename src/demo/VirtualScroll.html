@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/vue@next"></script>
+    <title>VirtualScroll</title>
+  </head>
+  <body>
+    <div id="app">
+      <div
+        ref="demo1"
+        class="scroll-box demo1"
+        :style="`height: ${showNumber * itemHeight}px;`"
+      >
+        <div
+          class="scroll-blank"
+          :style="`height: ${data.length * itemHeight}px;`"
+        ></div>
+        <div class="scroll-data" :style="`top: ${marginTop}px;`">
+          <div
+            v-for="(item, index) in activeList"
+            :key="item"
+            class="scroll-item"
+          >
+            {{ item }}
+          </div>
+        </div>
+      </div>
+      <div ref="demo2" class="scroll-box demo2">
+        <div class="scroll-data" :style="`top: ${marginTop}px;`">
+          <div
+            v-for="(item, index) in activeList"
+            :key="item"
+            class="scroll-item"
+          >
+            {{ item }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const { computed, onMounted, onUnmounted, ref } = Vue
+
+      const createData = (length) => {
+        const res = []
+        let i = 0
+        while (i < length) {
+          res.push(i++)
+        }
+        return res
+      }
+      const App = {
+        setup() {
+          const demo1 = ref(null)
+          const showNumber = 20
+          const itemHeight = 20
+          const data = createData(1000)
+          let startNum = ref(0)
+          let marginTop = ref(0)
+
+          const activeList = computed(() => {
+            const start = startNum.value
+            return data.slice(start, start + showNumber)
+          })
+
+          const scrollEvent = (event) => {
+            const { scrollTop } = event.target
+            startNum.value = parseInt(scrollTop / itemHeight)
+            marginTop.value = scrollTop
+          }
+
+          onMounted(() => {
+            demo1.value.addEventListener('scroll', scrollEvent)
+          })
+          onUnmounted(() => {
+            if (!demo1.value) return
+            demo1.value.removeEventListener('scroll', scrollEvent)
+            demo1.value = null
+          })
+
+          const demo2 = ref(null)
+          const scrollEvent2 = (event) => {
+            const { scrollTop } = event.target
+            startNum.value = parseInt(scrollTop / itemHeight)
+            marginTop.value = scrollTop
+          }
+
+          return {
+            showNumber,
+            itemHeight,
+            demo1,
+            marginTop,
+            data,
+            activeList,
+          }
+        },
+      }
+
+      const app = Vue.createApp(App)
+      app.mount('#app')
+    </script>
+    <style>
+      .scroll-box {
+        position: relative;
+        overflow: auto;
+        width: 400px;
+        border: 1px solid rgb(0, 0, 0);
+      }
+      .scroll-data {
+        position: absolute;
+        width: 100%;
+      }
+      .scroll-item {
+        height: 20px;
+      }
+      .scroll-item:hover {
+        background: rgb(104, 111, 211);
+        color: #fff;
+      }
+    </style>
+  </body>
+</html>
