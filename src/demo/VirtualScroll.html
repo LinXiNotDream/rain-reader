@@ -4,32 +4,21 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://unpkg.com/vue@next"></script>
+    <script src="https://unpkg.com/vue@3.2.27/dist/vue.global.js"></script>
     <title>VirtualScroll</title>
   </head>
   <body>
     <div id="app">
       <div
-        ref="demo1"
-        class="scroll-box demo1"
+        ref="demo"
+        class="scroll-box demo"
         :style="`height: ${showNumber * itemHeight}px;`"
       >
         <div
           class="scroll-blank"
           :style="`height: ${data.length * itemHeight}px;`"
         ></div>
-        <div class="scroll-data" :style="`top: ${marginTop}px;`">
-          <div
-            v-for="(item, index) in activeList"
-            :key="item"
-            class="scroll-item"
-          >
-            {{ item }}
-          </div>
-        </div>
-      </div>
-      <div ref="demo2" class="scroll-box demo2">
-        <div class="scroll-data" :style="`top: ${marginTop}px;`">
+        <div class="scroll-data" :style="`top: ${positionTop}px;`">
           <div
             v-for="(item, index) in activeList"
             :key="item"
@@ -41,57 +30,47 @@
       </div>
     </div>
     <script>
-      const { computed, onMounted, onUnmounted, ref } = Vue
+      const { onMounted, onUnmounted, computed, ref } = Vue
 
       const createData = (length) => {
-        const res = []
-        let i = 0
-        while (i < length) {
-          res.push(i++)
-        }
-        return res
+        return Object.keys(new Array(length).fill(''))
       }
       const App = {
         setup() {
-          const demo1 = ref(null)
-          const showNumber = 20
-          const itemHeight = 20
-          const data = createData(1000)
-          let startNum = ref(0)
-          let marginTop = ref(0)
+          const demo = ref(null) // 外框盒子
+          const showNumber = 20 // 当前视窗展示条数
+          const itemHeight = 20 // 每一条内容的高度
+          const data = createData(1000) // 实际数据
+          let startNum = ref(0) // 当前视窗范围内第一个元素下标
+          let positionTop = ref(0) // 当前视窗范围内第一个元素偏移量
 
+          // 计算当前视窗内实际要渲染的内容
           const activeList = computed(() => {
             const start = startNum.value
             return data.slice(start, start + showNumber)
           })
 
+          // 滚动的时候计算当前视窗范围内第一个元素下标
           const scrollEvent = (event) => {
             const { scrollTop } = event.target
             startNum.value = parseInt(scrollTop / itemHeight)
-            marginTop.value = scrollTop
+            positionTop.value = scrollTop
           }
 
           onMounted(() => {
-            demo1.value.addEventListener('scroll', scrollEvent)
+            demo.value.addEventListener('scroll', scrollEvent)
           })
           onUnmounted(() => {
-            if (!demo1.value) return
-            demo1.value.removeEventListener('scroll', scrollEvent)
-            demo1.value = null
+            if (!demo.value) return
+            demo.value.removeEventListener('scroll', scrollEvent)
+            demo.value = null
           })
-
-          const demo2 = ref(null)
-          const scrollEvent2 = (event) => {
-            const { scrollTop } = event.target
-            startNum.value = parseInt(scrollTop / itemHeight)
-            marginTop.value = scrollTop
-          }
 
           return {
             showNumber,
             itemHeight,
-            demo1,
-            marginTop,
+            demo,
+            positionTop,
             data,
             activeList,
           }
