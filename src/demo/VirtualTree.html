@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/vue@3.2.27/dist/vue.global.js"></script>
+    <title>VirtualTree</title>
+  </head>
+  <body>
+    <div id="app">
+      <div
+        ref="demo"
+        class="scroll-box demo"
+        :style="`height: ${showNumber * itemHeight}px;`"
+      >
+        <div
+          class="scroll-blank"
+          :style="`height: ${flatedTreeList.length * itemHeight}px;`"
+        ></div>
+        <div class="scroll-data" :style="`top: ${positionTop}px;`">
+          <template v-for="(item, index) in activeList">
+            <div v-if="item.isShow" :key="item.value" class="scroll-item">
+              <i v-if="item.children" @click="toggleExpand(index, item)">></i>
+              <span :style="`padding-left: ${item.level * 15}px;`">
+                {{item.label}}
+              </span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+    <script>
+      const { onMounted, onUnmounted, computed, ref, reactive } = Vue
+
+      const staticTree = [
+        {
+          label: 'a',
+          value: 1,
+          children: [
+            {
+              label: 'a-a',
+              value: 2,
+            },
+            {
+              label: 'a-b',
+              value: 3,
+              children: [
+                {
+                  label: 'a-b-a',
+                  value: 7,
+                },
+              ],
+            },
+            {
+              label: 'a-c',
+              value: 4,
+              children: [
+                {
+                  label: 'a-c-a',
+                  value: 8,
+                  children: [
+                    {
+                      label: 'a-c-a-a',
+                      value: 9,
+                    },
+                    {
+                      label: 'a-c-a-b',
+                      value: 10,
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              label: 'a-d',
+              value: 5,
+            },
+            {
+              label: 'a-e',
+              value: 6,
+              children: [
+                {
+                  label: 'a-e-a',
+                  value: 11,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'b',
+          value: 12,
+          children: [
+            {
+              label: 'b-a',
+              value: 22,
+            },
+            {
+              label: 'b-b',
+              value: 23,
+              children: [
+                {
+                  label: 'b-b-a',
+                  value: 27,
+                },
+              ],
+            },
+            {
+              label: 'b-c',
+              value: 24,
+              children: [
+                {
+                  label: 'b-c-a',
+                  value: 28,
+                  children: [
+                    {
+                      label: 'b-c-a-a',
+                      value: 29,
+                    },
+                    {
+                      label: 'b-c-a-b',
+                      value: 30,
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              label: 'b-d',
+              value: 25,
+            },
+            {
+              label: 'b-e',
+              value: 26,
+              children: [
+                {
+                  label: 'b-e-a',
+                  value: 31,
+                },
+              ],
+            },
+          ],
+        },
+      ]
+      const App = {
+        setup() {
+          const demo = ref(null) // 外框盒子
+          const showNumber = 8 // 当前视窗展示条数
+          const itemHeight = 20 // 每一条内容的高度
+          let startNum = ref(0) // 当前视窗范围内第一个元素下标
+          let positionTop = ref(0) // 当前视窗范围内第一个元素偏移量
+
+          // 拍平树形结构
+          const flatTreetoList = (data) => {
+            let resList = []
+            function travleTree(tree, level) {
+              tree.forEach((item) => {
+                resList.push({ ...item, level, isShow: true, isExpand: true })
+                if (item.children && item.children.length)
+                  travleTree(item.children, level + 1)
+              })
+            }
+            travleTree(data, 0)
+            return resList
+          }
+          const flatedTreeList = reactive(flatTreetoList(staticTree))
+
+          // 计算当前视窗内实际要渲染的内容
+          const activeList = computed(() => {
+            let showList = flatedTreeList.filter((item) => item.isShow)
+            const start = startNum.value
+            return showList.slice(start, start + showNumber)
+          })
+
+          onMounted(() => {
+            demo.value.addEventListener('scroll', scrollEvent)
+          })
+          onUnmounted(() => {
+            if (!demo.value) return
+            demo.value.removeEventListener('scroll', scrollEvent)
+            demo.value = null
+          })
+          // 滚动的时候计算当前视窗范围内第一个元素下标
+          const scrollEvent = (event) => {
+            const { scrollTop } = event.target
+            startNum.value = parseInt(scrollTop / itemHeight)
+            positionTop.value = scrollTop
+          }
+
+          const toggleExpand = (index, item) => {
+            let trueIndex = index + startNum.value
+            let isExpand = item.isExpand
+            flatedTreeList[trueIndex].isExpand = !isExpand
+            if (isExpand) {
+              // 执行收起
+              for (let i = trueIndex + 1; i < flatedTreeList.length; i++) {
+                if (flatedTreeList[i].level > item.level)
+                  flatedTreeList[i].isShow = false
+                // this.$set(flatedTreeList[i], 'isShow', false)
+                else break
+              }
+            } else {
+              // 执行展开
+              for (let i = trueIndex + 1; i < flatedTreeList.length; i++) {
+                if (flatedTreeList[i].level === item.level) break
+                else if (flatedTreeList[i].level === item.level + 1)
+                  flatedTreeList[i].isShow = true
+                else {
+                  if (
+                    flatedTreeList[i - 1].isExpand ||
+                    flatedTreeList[i - 1].isShow
+                  )
+                    flatedTreeList[i].isShow = true
+                }
+              }
+            }
+          }
+
+          return {
+            showNumber,
+            itemHeight,
+            demo,
+            positionTop,
+            activeList,
+            flatedTreeList,
+            toggleExpand,
+          }
+        },
+      }
+
+      const app = Vue.createApp(App)
+      app.mount('#app')
+    </script>
+    <style>
+      .scroll-box {
+        position: relative;
+        overflow: auto;
+        width: 400px;
+        border: 1px solid rgb(0, 0, 0);
+      }
+      .scroll-data {
+        position: absolute;
+        width: 100%;
+      }
+      .scroll-item {
+        height: 20px;
+      }
+      .scroll-item:hover {
+        background: rgb(104, 111, 211);
+        color: #fff;
+      }
+    </style>
+  </body>
+</html>
