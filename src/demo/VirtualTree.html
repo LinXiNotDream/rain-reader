@@ -16,13 +16,19 @@
       >
         <div
           class="scroll-blank"
-          :style="`height: ${flatedTreeList.length * itemHeight}px;`"
+          :style="`height: ${showFlatedTreeList.length * itemHeight}px;`"
         ></div>
         <div class="scroll-data" :style="`top: ${positionTop}px;`">
           <template v-for="(item, index) in activeList">
             <div v-if="item.isShow" :key="item.value" class="scroll-item">
-              <i v-if="item.children" @click="toggleExpand(index, item)">></i>
               <span :style="`padding-left: ${item.level * 15}px;`">
+                <i
+                  class="arrow"
+                  :class="{ 'is-show': item.children, 'not-open': !item.isExpand }"
+                  @click="toggleExpand(item)"
+                >
+                  >
+                </i>
                 {{item.label}}
               </span>
             </div>
@@ -166,6 +172,10 @@
           }
           const flatedTreeList = reactive(flatTreetoList(staticTree))
 
+          // 计算非收缩状态的数据
+          const showFlatedTreeList = computed(() => {
+            return flatedTreeList.filter((item) => item.isShow)
+          })
           // 计算当前视窗内实际要渲染的内容
           const activeList = computed(() => {
             let showList = flatedTreeList.filter((item) => item.isShow)
@@ -188,8 +198,10 @@
             positionTop.value = scrollTop
           }
 
-          const toggleExpand = (index, item) => {
-            let trueIndex = index + startNum.value
+          const toggleExpand = (item) => {
+            let trueIndex = flatedTreeList.findIndex(
+              (data) => item.value === data.value
+            )
             let isExpand = item.isExpand
             flatedTreeList[trueIndex].isExpand = !isExpand
             if (isExpand) {
@@ -197,7 +209,6 @@
               for (let i = trueIndex + 1; i < flatedTreeList.length; i++) {
                 if (flatedTreeList[i].level > item.level)
                   flatedTreeList[i].isShow = false
-                // this.$set(flatedTreeList[i], 'isShow', false)
                 else break
               }
             } else {
@@ -205,10 +216,11 @@
               for (let i = trueIndex + 1; i < flatedTreeList.length; i++) {
                 if (flatedTreeList[i].level === item.level) break
                 else if (flatedTreeList[i].level === item.level + 1)
+                  // level比点击展开的level大1则必定置为true
                   flatedTreeList[i].isShow = true
                 else {
                   if (
-                    flatedTreeList[i - 1].isExpand ||
+                    flatedTreeList[i - 1].isExpand &&
                     flatedTreeList[i - 1].isShow
                   )
                     flatedTreeList[i].isShow = true
@@ -224,6 +236,7 @@
             positionTop,
             activeList,
             flatedTreeList,
+            showFlatedTreeList,
             toggleExpand,
           }
         },
@@ -249,6 +262,19 @@
       .scroll-item:hover {
         background: rgb(104, 111, 211);
         color: #fff;
+      }
+      .arrow {
+        display: inline-block;
+        width: 25px;
+        text-align: center;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .is-show {
+        opacity: 1;
+      }
+      .not-open {
+        transform: rotate(90deg);
       }
     </style>
   </body>
