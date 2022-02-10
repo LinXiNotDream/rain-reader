@@ -25,7 +25,7 @@
               <span :style="`padding-left: ${item.level * 15}px;`">
                 <i
                   class="arrow"
-                  :class="{ 'is-show': item.haveChildren, 'not-open': !item.isExpand }"
+                  :class="{ 'is-show': item.children, 'not-open': !item.isExpand }"
                   @click="toggleExpand(item)"
                 >
                   >
@@ -38,7 +38,7 @@
       </div>
     </div>
     <script>
-      // 通过层级处理收拢和展开
+      // 通过引用数据类型特性处理收拢和展开
       const { onMounted, onUnmounted, computed, ref, reactive } = Vue
 
       const staticTree = [
@@ -164,14 +164,10 @@
             let resList = []
             function travelTree(tree, level) {
               tree.forEach((item) => {
-                resList.push({
-                  label: item.label,
-                  value: item.value,
-                  level,
-                  isExpand: true,
-                  isShow: true,
-                  haveChildren: item.children && item.children.length > 0,
-                })
+                item.level = level
+                item.isExpand = true
+                item.isShow = true
+                resList.push(item)
                 if (item.children && item.children.length)
                   travelTree(item.children, level + 1)
               })
@@ -179,7 +175,8 @@
             travelTree(data, 0)
             return resList
           }
-          const flattedTreeList = reactive(flatTreeToList(staticTree))
+          const defaultTree = reactive(staticTree)
+          const flattedTreeList = reactive(flatTreeToList(defaultTree))
 
           // 计算非收缩状态的数据
           const showFlattedTreeList = computed(() => {
@@ -208,34 +205,25 @@
           }
 
           const toggleExpand = (item) => {
-            let trueIndex = flattedTreeList.findIndex(
-              (data) => item.value === data.value
-            )
             let isExpand = item.isExpand
-            flattedTreeList[trueIndex].isExpand = !isExpand
-            if (isExpand) {
-              // 执行收起
-              for (let i = trueIndex + 1; i < flattedTreeList.length; i++) {
-                if (flattedTreeList[i].level > item.level)
-                  flattedTreeList[i].isShow = false
-                else break
-              }
-            } else {
-              // 执行展开
-              for (let i = trueIndex + 1; i < flattedTreeList.length; i++) {
-                if (flattedTreeList[i].level === item.level) break
-                else if (flattedTreeList[i].level === item.level + 1)
-                  // level比点击展开的level大1则必定置为true
-                  flattedTreeList[i].isShow = true
-                else {
-                  if (
-                    flattedTreeList[i - 1].isExpand &&
-                    flattedTreeList[i - 1].isShow
-                  )
-                    flattedTreeList[i].isShow = true
+            item.isExpand = !isExpand
+            if (item.children && item.children.length)
+              setTreeStatus(item.children, !isExpand)
+          }
+
+          const setTreeStatus = (children, status) => {
+            const travel = (list) => {
+              list.forEach((child) => {
+                child.isShow = status
+                if (child.children && child.children.length) {
+                  // 展开则只展开子集中的isExpand为true的
+                  // 收拢则全部收拢
+                  if ((status && child.isExpand) || !status)
+                    travel(child.children)
                 }
-              }
+              })
             }
+            travel(children)
           }
 
           return {
